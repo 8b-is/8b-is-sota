@@ -11,9 +11,12 @@ let package = Package(
     platforms: [.iOS(.v17), .macOS(.v14)],
     products: [
         .library(name: "SOTACore", targets: ["SOTACore"]),
+        .library(name: "SOTAUI", targets: ["SOTAUI"]),
     ],
     targets: [
         .target(name: "SOTACore"),
+        .target(name: "SOTAUI", dependencies: ["SOTACore"], resources: [.process("Resources")]),
         .testTarget(name: "SOTACoreTests", dependencies: ["SOTACore"]),
+        .testTarget(name: "SOTAUITests", dependencies: ["SOTAUI"]),
     ]
 )
