@@ -3,6 +3,13 @@
 All notable changes to SOTA.app are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Fixed
+- Apply per-capability model overrides to the settings board. New preferences
+  default to Auto; saved selections are preserved. Unavailable engines or choices
+  excluded by the on-device/latency policy fall back to automatic scoring.
+
 ## [0.1.1] — 2026-10-09
 
 ### Added
