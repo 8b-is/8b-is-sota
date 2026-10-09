@@ -40,13 +40,17 @@ public struct Router: Sendable {
     /// SOTA score = quality, discounted by latency (seconds). Quality at speed.
     public func sota(_ e: Engine) -> Double { e.quality / (1 + e.latencyMS / 1000) }
 
+    /// An eligible preferred engine wins; an unavailable or disallowed preference
+    /// falls back to the highest-scoring engine under the same policy.
     public func route(_ cap: Capability,
                       onDeviceOnly: Bool = true,
-                      maxLatencyMS: Double = .infinity) -> Route? {
+                      maxLatencyMS: Double = .infinity,
+                      preferredEngineID: String? = nil) -> Route? {
         let pool = engines.filter {
             $0.capability == cap && (!onDeviceOnly || $0.onDevice) && $0.latencyMS <= maxLatencyMS
         }
-        guard let best = pool.max(by: { sota($0) < sota($1) }) else { return nil }
+        let preferred = pool.first { !$0.id.isEmpty && $0.id == preferredEngineID }
+        guard let best = preferred ?? pool.max(by: { sota($0) < sota($1) }) else { return nil }
         let reason = "\(best.piece) · \(String(format: "%.2f", best.bits))-bit · \(Int(best.latencyMS)) ms · q \(String(format: "%.2f", best.quality))"
         return Route(engine: best, score: sota(best), reason: reason)
     }
