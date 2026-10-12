@@ -76,8 +76,14 @@ working, fully on-device session in a few taps.
 
 ```swift
 import SOTACore
-// see Sources/SOTACore for the public surface
+let route = Router().route(.infer, preferredEngineID: "project-zero")
 ```
+
+In `SettingsView`, model overrides update the board for that capability. New
+preferences default to **Auto**, which chooses the highest-scoring eligible
+engine. An override still obeys the on-device and latency limits. If the selected
+engine is unavailable or excluded, routing falls back to Auto; if no engine is
+eligible, it returns no route. Existing saved selections are preserved.
 
 ## Architecture
 

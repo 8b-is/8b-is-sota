@@ -44,4 +44,33 @@ final class SOTACoreTests: XCTestCase {
         XCTAssertEqual(board.count, Capability.allCases.count)
         XCTAssertTrue(board.allSatisfy { $0.1 != nil })
     }
+
+    func testEligiblePreferenceOverridesScore() {
+        let router = Router()
+        let route = router.route(.infer, preferredEngineID: "project-zero")
+        XCTAssertEqual(route?.engine.id, "project-zero")
+        XCTAssertEqual(route?.score, router.sota(Router.stack.first { $0.id == "project-zero" }!))
+    }
+
+    func testAutoAndUnavailablePreferencesUseScoring() {
+        for preference: String? in [nil, "", "removed-engine", "mem8"] {
+            XCTAssertEqual(Router().route(.infer, preferredEngineID: preference)?.engine.id, "mlx-quant")
+        }
+    }
+
+    func testPreferenceCannotBypassOnDevicePolicy() {
+        let router = Router()
+        XCTAssertEqual(router.route(.transcribe, preferredEngineID: "whisper-large")?.engine.id, "kotoro")
+        XCTAssertEqual(router.route(.transcribe, onDeviceOnly: false,
+                                    preferredEngineID: "whisper-large")?.engine.id, "whisper-large")
+    }
+
+    func testPreferenceCannotBypassLatencyCap() {
+        let router = Router()
+        XCTAssertEqual(router.route(.infer, maxLatencyMS: 150,
+                                    preferredEngineID: "project-zero")?.engine.id, "mlx-quant")
+        XCTAssertEqual(router.route(.infer, maxLatencyMS: 210,
+                                    preferredEngineID: "project-zero")?.engine.id, "project-zero")
+        XCTAssertNil(router.route(.infer, maxLatencyMS: 100, preferredEngineID: "project-zero"))
+    }
 }

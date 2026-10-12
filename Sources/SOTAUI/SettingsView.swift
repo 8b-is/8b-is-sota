@@ -35,22 +35,8 @@ public struct SettingsView: View {
 
             Section("The board") {
                 ForEach(Capability.allCases, id: \.self) { cap in
-                    let route = router.route(cap, onDeviceOnly: onDeviceOnly, maxLatencyMS: latencyCap)
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(cap.rawValue.capitalized).frame(width: 96, alignment: .leading)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(route?.engine.piece ?? "—").font(.callout)
-                            if let r = route {
-                                Text(r.reason).font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                        Spacer()
-                        if let r = route {
-                            Text(String(format: "%.2f", r.score))
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(.tint)
-                        }
-                    }
+                    RoutingBoardRow(capability: cap, router: router,
+                                    onDeviceOnly: onDeviceOnly, maxLatencyMS: latencyCap)
                 }
             }
 
@@ -58,7 +44,7 @@ public struct SettingsView: View {
                 ForEach(Capability.allCases, id: \.self) { cap in
                     EngineRow(capability: cap, engines: router.engines.filter { $0.capability == cap })
                 }
-                Text("Leave on \"Auto\" to let the router decide.")
+                Text("Auto picks the highest-scoring engine. If your choice is unavailable or excluded by the routing limits, Auto is used.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -83,18 +69,60 @@ public struct SettingsView: View {
     }
 }
 
+/// Observe the same capability preference as the picker so the displayed route
+/// refreshes when the selection changes.
+struct RoutingBoardRow: View {
+    let capability: Capability
+    let router: Router
+    let onDeviceOnly: Bool
+    let maxLatencyMS: Double
+    @AppStorage private var preferred: String
+
+    init(capability: Capability, router: Router, onDeviceOnly: Bool,
+         maxLatencyMS: Double, store: UserDefaults? = nil) {
+        self.capability = capability
+        self.router = router
+        self.onDeviceOnly = onDeviceOnly
+        self.maxLatencyMS = maxLatencyMS
+        _preferred = AppStorage(wrappedValue: "", SOTAKeys.preferred(capability), store: store)
+    }
+
+    var route: Route? {
+        router.route(capability, onDeviceOnly: onDeviceOnly, maxLatencyMS: maxLatencyMS,
+                     preferredEngineID: preferred)
+    }
+
+    var body: some View {
+        let result = route
+        HStack(alignment: .firstTextBaseline) {
+            Text(capability.rawValue.capitalized).frame(width: 96, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(result?.engine.piece ?? "—").font(.callout)
+                if let r = result {
+                    Text(r.reason).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            if let r = result {
+                Text(String(format: "%.2f", r.score))
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.tint)
+            }
+        }
+    }
+}
+
 /// One per-capability preferred-engine override, persisted per capability.
-private struct EngineRow: View {
+struct EngineRow: View {
     let capability: Capability
     let engines: [Engine]
 
-    @AppStorage private var preferred: String
+    @AppStorage var preferred: String
 
-    init(capability: Capability, engines: [Engine]) {
+    init(capability: Capability, engines: [Engine], store: UserDefaults? = nil) {
         self.capability = capability
         self.engines = engines
-        let defaultID = engines.first(where: { $0.onDevice })?.id ?? engines.first?.id ?? ""
-        _preferred = AppStorage(wrappedValue: defaultID, SOTAKeys.preferred(capability))
+        _preferred = AppStorage(wrappedValue: "", SOTAKeys.preferred(capability), store: store)
     }
 
     var body: some View {
